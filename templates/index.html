@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NoteTaker Web</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f4; }
+        .container { background: #fff; padding: 30px; border-radius: 8px; max-width: 600px; margin: auto; box-shadow: 0 2px 8px #ccc; }
+        h1 { text-align: center; }
+        .note-list { margin-top: 20px; }
+        .note-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .note-item:last-child { border-bottom: none; }
+        button { margin-left: 8px; }
+        .search-bar { margin-top: 20px; display: flex; }
+        .search-bar input { flex: 1; padding: 5px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>NoteTaker</h1>
+    <form id="addForm">
+        <input type="text" id="noteInput" placeholder="Enter your note" required style="width:80%;padding:5px;">
+        <button type="submit">Add Note</button>
+    </form>
+    <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Search notes...">
+        <button onclick="searchNotes()">Search</button>
+        <button onclick="loadNotes()" style="margin-left:10px;">Show All</button>
+    </div>
+    <div class="note-list" id="noteList"></div>
+</div>
+<script>
+function loadNotes() {
+    fetch('/api/notes')
+        .then(res => res.json())
+        .then(notes => {
+            renderNotes(notes);
+        });
+}
+function renderNotes(notes) {
+    const noteList = document.getElementById('noteList');
+    noteList.innerHTML = '';
+    if (notes.length === 0) {
+        noteList.innerHTML = '<p>No notes found.</p>';
+        return;
+    }
+    notes.forEach(note => {
+        const div = document.createElement('div');
+        div.className = 'note-item';
+        div.innerHTML = `<span>${note.id}: ${note.content}</span> <button onclick="deleteNote(${note.id})">Delete</button>`;
+        noteList.appendChild(div);
+    });
+}
+document.getElementById('addForm').onsubmit = function(e) {
+    e.preventDefault();
+    const note = document.getElementById('noteInput').value;
+    fetch('/api/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note })
+    })
+    .then(res => res.json())
+    .then(() => {
+        document.getElementById('noteInput').value = '';
+        loadNotes();
+    });
+};
+function searchNotes() {
+    const keyword = document.getElementById('searchInput').value;
+    if (!keyword) { loadNotes(); return; }
+    fetch(`/api/notes/search?keyword=${encodeURIComponent(keyword)}`)
+        .then(res => res.json())
+        .then(notes => {
+            renderNotes(notes);
+        });
+}
+function deleteNote(id) {
+    fetch(`/api/notes/${id}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(() => loadNotes());
+}
+window.onload = loadNotes;
+</script>
+</body>
+</html>
